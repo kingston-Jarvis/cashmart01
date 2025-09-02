@@ -440,15 +440,96 @@ const CashMartApp = {
 
         // Also allow clicking anywhere on the card to play
         card.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('play-btn')) {
-                console.log(`🎮 Opening game: ${game.name}`);
-                window.open(game.playUrl, '_blank');
-            }
+            e.preventDefault(); // Stop any default action
+            console.log(`🎮 Game card clicked for: ${game.name}`);
+            this.showGamePage(game); // NEW: Call our game page function
         });
-        
+    
         return card;
     },
 
+// Add this new function in your app.js
+showGamePage(game) {
+    console.log(`🎮 Loading game page for: ${game.name}`);
+
+    // Hide all other pages first
+    document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+    });
+
+    // Show our new play-game page
+    const targetPage = document.getElementById('page-play-game');
+    if (targetPage) {
+        targetPage.classList.add('active');
+
+        // 1. Set the main game iframe and title
+        document.getElementById('game-title-main').textContent = game.name;
+        document.getElementById('game-iframe').src = game.playUrl;
+
+        // 2. Populate the recommendation sidebar
+        const recContainer = document.getElementById('game-recommendations');
+        recContainer.innerHTML = '<h3 class="recommendation-title">More Games</h3>'; // Clear old ones
+
+        const recommendedGames = this.data.games
+            .filter(g => g.name !== game.name) // Don't recommend the same game
+            .sort(() => 0.5 - Math.random()) // Shuffle
+            .slice(0, 5); // Take first 5
+
+        recommendedGames.forEach(recGame => {
+            const recCard = document.createElement('div');
+            recCard.className = 'rec-game-card';
+            recCard.innerHTML = `
+                <img src="${recGame.image}" alt="${recGame.name}" class="rec-game-image">
+                <div class="rec-game-title">${recGame.name}</div>
+            `;
+            recCard.addEventListener('click', () => this.showGamePage(recGame));
+            recContainer.appendChild(recCard);
+        });
+
+        // 3. Populate the "More Games" grid below
+        const moreGamesContainer = document.getElementById('more-games-grid');
+        moreGamesContainer.innerHTML = ''; // Clear old ones
+
+        const moreGames = this.data.games
+            .filter(g => g.name !== game.name) // Exclude current game
+            .sort(() => 0.5 - Math.random()) // Shuffle
+            .slice(0, 12); // Show 12 more games
+
+        moreGames.forEach((moreGame, index) => {
+            const card = this.createGameCard(moreGame, index); // Reuse our existing function!
+            moreGamesContainer.appendChild(card);
+        });
+// 4. Populate and set up the new game controls bar
+const gameControlTitle = document.getElementById('game-control-title');
+const gameControlIcon = document.getElementById('game-control-icon');
+const fullscreenBtn = document.getElementById('fullscreen-btn');
+const gameIframe = document.getElementById('game-iframe');
+
+if (gameControlTitle && gameControlIcon && fullscreenBtn && gameIframe) {
+    gameControlTitle.textContent = game.name;
+    gameControlIcon.src = game.image; // Use game's image as icon
+
+    // Fullscreen button functionality
+    fullscreenBtn.onclick = () => {
+        if (gameIframe.requestFullscreen) {
+            gameIframe.requestFullscreen();
+        } else if (gameIframe.mozRequestFullScreen) { /* Firefox */
+            gameIframe.mozRequestFullScreen();
+        } else if (gameIframe.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+            gameIframe.webkitRequestFullscreen();
+        } else if (gameIframe.msRequestFullscreen) { /* IE/Edge */
+            gameIframe.msRequestFullscreen();
+        }
+    };
+}
+    } else {
+        console.error('❌ Play Game page not found!');
+    }
+
+    // Scroll to the top of the page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+},
+    
     // Theme management
     initializeTheme() {
         const savedTheme = localStorage.getItem('cashmart-theme') || 'light';
